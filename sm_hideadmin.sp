@@ -3,16 +3,13 @@
 #include <sourcemod>
 #include <colors>
 #include "sha/logging.sp"
+#include "sha/convars.sp"
+#include "sha/natives.sp"
 
 #define PLUGIN_VERSION "1.0"
+#define LOG_PATH "logs/hide-admin.log"
 
-new Handle:g_hCvarClientInfoKey = INVALID_HANDLE, 
-Handle:g_hCvarEnabled = INVALID_HANDLE,
-Handle:g_hCvarLog;
-
-new bool:g_bPluginEnabled,
-String:g_strClientInfoKey[256],
-bool:g_bLog, 
+new bool:g_bPluginLate,
 bool:g_bIsClientHidden[MAXPLAYERS+1];
 
 public Plugin:myinfo = 
@@ -26,36 +23,15 @@ public Plugin:myinfo =
 
 public OnPluginStart()
 {
-	CreateConVar("sm_sha_version", PLUGIN_VERSION, "The version of the plugin", FCVAR_DONTRECORD|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	HookConVarChange((g_hCvarEnabled = CreateConVar("sm_sha_enabled", "1", "Is this plugin enabled?")), OnCvarEnabledChanged);
-	HookConVarChange((g_hCvarClientInfoKey = CreateConVar("sm_sha_clientinfo_key", "hide-admin", "The key that clients need to set outside of the server to be marked as hidden.")), OnCvarClientKeyChanged);
-	HookConVarChange((g_hCvarLog = CreateConVar("sm_sha_verbose_log", "0", "Create detailed logging of admin hide details?")), OnCvarLogChanged);
-	
-	
+	CreateConVar("sm_sha_version", PLUGIN_VERSION, "The version of the plugin", FCVAR_DONTRECORD|FCVAR_REPLICATED|FCVAR_NOTIFY);	
 }
 
-public OnConfigsExecuted()
+public AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 {
-	g_bPluginEnabled = GetConVarBool(g_hCvarEnabled);
-	g_bLog = GetConVarBool(g_hCvarLog);
-	
-	GetConVarString(g_hCvarClientInfoKey, g_strClientInfoKey, sizeof(g_strClientInfoKey));
+	g_bPluginLate = late;
+	RegisterNatives();
 }
 
-public OnCvarEnabledChanged(Handle:conVar, const String:newValue[], const String:oldValue[])
-{
-	g_bPluginEnabled = StringToInt(newValue) ? true : false;
-}
-
-public OnCvarClientKeyChanged(Handle:conVar, const String:newValue[], const String:oldValue[])
-{
-	strcopy(g_strClientInfoKey, sizeof(g_strClientInfoKey), newValue);
-}
-
-public OnCvarLogChanged(Handle:conVar, const String:newValue[], const String:oldValue[])
-{
-	g_bLog = StringToInt(newValue) ? true : false;
-}
 public Action:OnClientPreAdminCheck(client)
 {
 	if (g_bPluginEnabled)
@@ -72,7 +48,7 @@ public Action:OnClientPreAdminCheck(client)
 		}
 		else
 		{
-			//do stuff
+			return Plugin_Continue;
 		}
 	}
 }
